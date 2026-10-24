@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baseline — a shared layer for wearable data</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f6ef7'/%3E%3Cpath d='M3 29h11l4-13 7 22 5-14 3 5h9' stroke='white' stroke-width='3.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='42' cy='29' r='3.2' fill='white'/%3E%3C/svg%3E" />
+    <meta name="theme-color" content="#4f6ef7" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand" role="button" title="Back to sign in">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 29h11l4-13 7 22 5-14 3 5h9" stroke="#fff" stroke-width="3.4"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="42" cy="29" r="3.2" fill="#fff"/>
+          </svg>
+        </span>
+        <div class="brand-text">
+          <div class="title">Baseline<span class="dotmark">.</span></div>
+          <div class="tag">Wearable data for the care team</div>
+        </div>
+      </div>
+      <div class="topbar-right" id="auth-bar" hidden>
+        <span class="role-pill"><span class="role-pill-dot"></span><span id="role-label">Clinician</span></span>
+        <button id="sign-out" class="sign-out">Sign out</button>
+      </div>
+    </header>
+
+    <main id="root"></main>
+
+    <script>
+    /* ===================== shared data layer ===================== */
+    const CSV = {
+      "Jordan Alvarez": `Cycle start date,Resting heart rate bpm,Heart rate variability ms,Asleep duration min,Respiratory rate rpm,Steps,Active calories,Skin temp celsius,Blood oxygen %
+2026-07-26,56,58,445,14.3,8200,520,-0.1,98
+2026-07-29,55,61,452,14.2,8600,540,0.0,98
+2026-08-01,57,57,438,14.4,7900,500,0.1,97
+2026-08-05,56,60,448,14.3,8400,530,-0.1,98
+2026-08-09,55,59,455,14.1,8800,560,0.0,98
+2026-08-13,57,56,441,14.4,8100,510,0.1,97
+2026-08-17,56,62,450,14.2,8500,545,-0.1,98
+2026-08-21,54,63,458,14.1,9000,580,0.0,98
+2026-08-25,56,58,444,14.3,8300,525,0.1,98
+2026-08-29,55,60,449,14.2,8700,555,0.0,98
+2026-09-02,57,57,437,14.4,7800,495,0.1,97
+2026-09-06,56,59,446,14.3,8400,530,-0.1,98
+2026-09-10,55,61,453,14.2,8600,545,0.0,98
+2026-09-14,56,58,442,14.3,8200,515,0.1,98
+2026-09-18,57,56,439,14.4,7900,500,0.0,97
+2026-09-22,55,60,451,14.2,8500,540,-0.1,98
+2026-09-26,56,59,447,14.3,8300,525,0.1,98
+2026-09-30,58,55,430,14.6,7400,470,0.3,97
+2026-10-02,60,51,418,14.9,6800,430,0.6,96
+2026-10-04,62,48,405,15.1,6200,390,0.9,96
+2026-10-06,63,45,398,15.3,5600,350,1.1,95
+2026-10-08,64,44,392,15.4,5100,320,1.3,95
+2026-10-10,65,42,385,15.6,4700,295,1.4,94
+2026-10-12,66,41,378,15.7,4300,270,1.5,94
+2026-10-14,65,43,382,15.6,4500,285,1.4,94
+2026-10-16,66,40,375,15.8,4100,255,1.6,93
+2026-10-18,67,39,370,15.9,3800,240,1.7,93
+2026-10-20,66,41,377,15.7,4200,265,1.5,94
+2026-10-22,67,40,372,15.9,3900,245,1.6,93`,
+      "Priya Menon": `date,Lowest Resting Heart Rate,Average HRV,Total Sleep Duration,Respiratory Rate,Steps,Active Calories,Skin Temperature Deviation,SpO2
+2026-07-27,62,45,27000,15.2,6200,410,0.0,98
+2026-07-31,61,47,27360,15.1,6400,420,-0.1,98
+2026-08-04,63,44,26640,15.3,6000,400,0.1,97
+2026-08-08,62,46,27180,15.2,6300,415,0.0,98
+2026-08-12,61,48,27540,15.0,6500,425,-0.1,98
+2026-08-16,63,43,26460,15.3,5900,395,0.1,97
+2026-08-20,62,45,27000,15.2,6200,410,0.0,98
+2026-08-24,61,47,27360,15.1,6400,420,-0.1,98
+2026-08-28,63,44,26820,15.3,6100,405,0.1,97
+2026-09-01,62,46,27180,15.2,6300,415,0.0,98
+2026-09-05,61,45,27000,15.2,6200,410,0.0,98
+2026-09-09,62,44,26640,15.3,6000,400,0.1,97
+2026-09-13,63,46,27180,15.1,6300,415,0.0,98
+2026-09-17,62,45,26820,15.2,6100,405,0.0,98
+2026-09-21,61,47,27360,15.1,6400,420,-0.1,98
+2026-09-25,62,44,26640,15.3,6000,400,0.1,97
+2026-09-29,63,45,26460,15.2,5900,395,0.1,98
+2026-10-03,62,43,25920,15.4,5700,380,0.2,97
+2026-10-07,63,42,25560,15.5,5500,370,0.2,97
+2026-10-11,64,41,25200,15.5,5300,355,0.3,97
+2026-10-15,63,43,25740,15.4,5600,375,0.2,97
+2026-10-19,64,42,25380,15.5,5400,360,0.3,97
+2026-10-23,63,44,25560,15.4,5500,370,0.2,97`,
+      "Sam Whitaker": `startDate,RestingHeartRate,HeartRateVariability,SleepHours,RespiratoryRate,StepCount,ActiveEnergyBurned,AppleSleepingWristTemperature,OxygenSaturation
+2026-07-28,64,42,7.1,15.5,10200,620,-0.1,98
+2026-08-01,65,41,7.0,15.6,9800,600,0.0,98
+2026-08-05,63,43,7.2,15.4,10500,640,0.1,98
+2026-08-09,64,42,7.1,15.5,10100,615,-0.1,98
+2026-08-13,65,40,6.9,15.6,9900,605,0.0,97
+2026-08-17,63,43,7.3,15.4,10600,645,0.1,98
+2026-08-21,64,41,7.0,15.5,10200,620,0.0,98
+2026-08-25,65,42,7.1,15.5,10000,610,-0.1,98
+2026-08-29,63,43,7.2,15.4,10400,635,0.1,98
+2026-09-02,64,41,7.0,15.6,9900,605,0.0,98
+2026-09-06,65,42,7.1,15.5,10200,620,0.0,98
+2026-09-10,63,43,7.2,15.4,10500,640,0.1,98
+2026-09-14,64,42,7.1,15.5,10100,615,-0.1,98
+2026-09-18,65,40,6.9,15.6,9800,600,0.0,97
+2026-09-22,63,44,7.3,15.3,10700,650,0.1,98
+2026-09-26,64,42,7.1,15.5,10300,630,0.0,98
+2026-09-30,65,41,7.0,15.6,9900,605,0.0,98
+2026-10-04,64,43,7.2,15.4,10500,640,0.1,98
+2026-10-08,63,42,7.1,15.5,10200,620,-0.1,98
+2026-10-12,64,41,7.0,15.6,10000,610,0.0,98
+2026-10-16,65,43,7.2,15.4,10600,645,0.1,98
+2026-10-20,63,42,7.1,15.5,10300,630,0.0,98`,
+    };
+
+    // Per-patient profile: connected device, share toggles, patient note, care plan.
+    // careplan is written by the clinician after a visit and shown read-only to the patient.
+    const PROFILE = {
+      "Jordan Alvarez": { device: "WHOOP", connected: true, note: "Started a new medication on 10/1. Feeling more tired lately.",
+        share: { restingHeartRate: true, hrv: true, sleepHours: true, respiratoryRate: true, steps: true, activeCalories: true, skinTemp: true, spo2: true }, shareDays: 0, lastVisit: "2026-09-26", nextVisit: "2026-10-26",
+        careplan: { updated: "", author: "", summary: "", watch: "" } },
+      "Priya Menon": { device: "Oura", connected: true, note: "",
+        share: { restingHeartRate: true, hrv: true, sleepHours: true, respiratoryRate: true, steps: true, activeCalories: true, skinTemp: true, spo2: true }, shareDays: 0, lastVisit: "2026-09-25", nextVisit: "2026-10-28",
+        careplan: { updated: "", author: "", summary: "", watch: "" } },
+      "Sam Whitaker": { device: "Apple Watch", connected: true, note: "Feeling good, training for a 10k.",
+        share: { restingHeartRate: true, hrv: true, sleepHours: true, respiratoryRate: true, steps: true, activeCalories: true, skinTemp: true, spo2: true }, shareDays: 0, lastVisit: "2026-09-26", nextVisit: "2026-11-02",
+        careplan: { updated: "", author: "", summary: "", watch: "" } },
+    };
+
+    /* ===================== parse / normalize ===================== */
+    function parseCsv(text) {
+      const lines = text.trim().split(/\r?\n/);
+      const headers = lines[0].split(",").map((c) => c.trim());
+      const rows = lines.slice(1).map((line) => {
+        const cells = line.split(",").map((c) => c.trim());
+        const obj = {}; headers.forEach((h, i) => (obj[h] = cells[i])); return obj;
+      });
+      return { headers, rows };
+    }
+    function detectBrand(headers) {
+      const h = headers.map((x) => x.toLowerCase());
+      if (h.some((x) => x.includes("cycle start") || x.includes("asleep duration"))) return "WHOOP";
+      if (h.some((x) => x.includes("lowest resting") || x.includes("total sleep duration"))) return "Oura";
+      if (h.some((x) => x.includes("startdate") || x.includes("heartratevariability"))) return "Apple Watch";
+      return "Unknown";
+    }
+    const MAP = {
+      WHOOP: { date: "Cycle start date", restingHeartRate: "Resting heart rate bpm", hrv: "Heart rate variability ms", sleepMinutes: "Asleep duration min", respiratoryRate: "Respiratory rate rpm", steps: "Steps", activeCalories: "Active calories", skinTemp: "Skin temp celsius", spo2: "Blood oxygen %" },
+      Oura: { date: "date", restingHeartRate: "Lowest Resting Heart Rate", hrv: "Average HRV", sleepSeconds: "Total Sleep Duration", respiratoryRate: "Respiratory Rate", steps: "Steps", activeCalories: "Active Calories", skinTemp: "Skin Temperature Deviation", spo2: "SpO2" },
+      "Apple Watch": { date: "startDate", restingHeartRate: "RestingHeartRate", hrv: "HeartRateVariability", sleepHours: "SleepHours", respiratoryRate: "RespiratoryRate", steps: "StepCount", activeCalories: "ActiveEnergyBurned", skinTemp: "AppleSleepingWristTemperature", spo2: "OxygenSaturation" },
+    };
+    const num = (v) => { if (v === undefined || v === "") return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+    function normalize(brand, rows) {
+      const m = MAP[brand]; if (!m) return [];
+      return rows.map((r) => {
+        let sleepHours = null;
+        if (m.sleepHours) sleepHours = num(r[m.sleepHours]);
+        else if (m.sleepMinutes) { const min = num(r[m.sleepMinutes]); sleepHours = min == null ? null : +(min / 60).toFixed(2); }
+        else if (m.sleepSeconds) { const s = num(r[m.sleepSeconds]); sleepHours = s == null ? null : +(s / 3600).toFixed(2); }
+        return {
+          date: r[m.date],
+          restingHeartRate: num(r[m.restingHeartRate]),
+          hrv: num(r[m.hrv]),
+          sleepHours,
+          respiratoryRate: num(r[m.respiratoryRate]),
+          steps: num(r[m.steps]),
+          activeCalories: num(r[m.activeCalories]),
+          skinTemp: num(r[m.skinTemp]),
+          spo2: num(r[m.spo2]),
+        };
+      }).filter((rec) => rec.date).sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    /* ===================== analyze ===================== */
+    const METRICS = [
+      { key: "restingHeartRate", label: "Resting heart rate", unit: "bpm", goodDir: "down" },
+      { key: "hrv", label: "HRV", unit: "ms", goodDir: "up" },
+      { key: "sleepHours", label: "Sleep", unit: "h", goodDir: "up" },
+      { key: "respiratoryRate", label: "Respiratory rate", unit: "rpm", goodDir: "down" },
+      { key: "spo2", label: "Blood oxygen", unit: "%", goodDir: "up" },
+      { key: "skinTemp", label: "Skin temp deviation", unit: "°C", goodDir: "down" },
+      { key: "steps", label: "Steps", unit: "/day", goodDir: "up" },
+      { key: "activeCalories", label: "Active calories", unit: "kcal", goodDir: "up" },
+    ];
+    const PCT_THRESHOLD = { restingHeartRate: 0.08, hrv: 0.15, sleepHours: 0.15, respiratoryRate: 0.05, spo2: 0.02, steps: 0.20, activeCalories: 0.20 };
+    // skinTemp is a deviation around 0, so percent change is meaningless. Flag on absolute °C.
+    const ABS_THRESHOLD = { skinTemp: 0.5 };
+    const RECENT_WINDOW = 6, Z_FLAG = 1.5, Z_RED = 2.0;
+    const mean = (xs) => { const v = xs.filter((x) => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+    const stddev = (xs, m) => { const v = xs.filter((x) => x != null); if (v.length < 2) return 0; return Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length - 1)); };
+    function analyze(records, share, zFlag) {
+      const zCut = zFlag ?? Z_FLAG;
+      const n = records.length;
+      const recentCount = Math.min(RECENT_WINDOW, Math.floor(n / 3));
+      const baseRecs = records.slice(0, n - recentCount), recentRecs = records.slice(n - recentCount);
+      const findings = [], baseline = {};
+      for (const metric of METRICS) {
+        if (share && share[metric.key] === false) continue; // respect share toggles
+        const baseMean = mean(baseRecs.map((r) => r[metric.key]));
+        if (baseMean == null) continue;
+        const baseSd = stddev(baseRecs.map((r) => r[metric.key]), baseMean);
+        const recentMean = mean(recentRecs.map((r) => r[metric.key]));
+        if (recentMean == null) continue;
+        const delta = recentMean - baseMean, pct = baseMean === 0 ? 0 : delta / baseMean, z = baseSd === 0 ? 0 : delta / baseSd;
+        baseline[metric.key] = { mean: baseMean, sd: baseSd, lo: baseMean - baseSd, hi: baseMean + baseSd };
+        const absFlag = ABS_THRESHOLD[metric.key] != null && Math.abs(delta) >= ABS_THRESHOLD[metric.key];
+        const pctFlag = ABS_THRESHOLD[metric.key] == null && Math.abs(pct) >= (PCT_THRESHOLD[metric.key] ?? 0.1);
+        if (Math.abs(z) >= zCut || pctFlag || absFlag) {
+          const direction = delta > 0 ? "up" : "down";
+          findings.push({ key: metric.key, label: metric.label, unit: metric.unit, baseMean: +baseMean.toFixed(1), recentMean: +recentMean.toFixed(1), delta: +delta.toFixed(1), pct: +(pct * 100).toFixed(0), z: +z.toFixed(1), direction, concerning: direction !== metric.goodDir, severe: Math.abs(z) >= Z_RED });
+        }
+      }
+      let status = "green";
+      if (findings.some((f) => f.severe && f.concerning)) status = "red";
+      else if (findings.some((f) => f.concerning)) status = "yellow";
+      const urgency = findings.filter((f) => f.concerning).reduce((a, f) => a + Math.abs(f.z), 0);
+      return { baseline, findings, status, urgency, recentCount };
+    }
+
+    /* ===================== brief ===================== */
+    function phrase(f) {
+      const d = f.direction, aD = Math.abs(f.delta), aP = Math.abs(f.pct);
+      if (f.key === "restingHeartRate") return `Resting heart rate is ${d} ${aD} bpm versus the patient's baseline (${f.baseMean} to ${f.recentMean} bpm).`;
+      if (f.key === "hrv") return `HRV is ${d} ${aP}% from baseline (${f.baseMean} to ${f.recentMean} ms).`;
+      if (f.key === "sleepHours") return `Sleep has moved from ${f.baseMean} to ${f.recentMean} hours per night (${d} ${aP}%).`;
+      if (f.key === "respiratoryRate") return `Respiratory rate is ${d} ${aD} rpm from baseline (${f.baseMean} to ${f.recentMean} rpm).`;
+      if (f.key === "spo2") return `Blood oxygen is ${d} ${aD} points from baseline (${f.baseMean} to ${f.recentMean}%).`;
+      if (f.key === "skinTemp") return `Skin temperature is ${d} ${aD}°C relative to baseline (${f.baseMean} to ${f.recentMean}°C deviation).`;
+      if (f.key === "steps") return `Daily steps are ${d} ${aP}% from baseline (${f.baseMean} to ${f.recentMean} per day).`;
+      if (f.key === "activeCalories") return `Active calories are ${d} ${aP}% from baseline (${f.baseMean} to ${f.recentMean} kcal per day).`;
+      return `${f.label} is ${d} ${aP}% from baseline.`;
+    }
+    function buildQuestions(f) {
+      const qs = [], has = (k) => f.find((x) => x.key === k);
+      if (has("restingHeartRate") && has("hrv")) qs.push("Ask about recent stress, illness, or new medication since the change began.");
+      else if (has("restingHeartRate")) qs.push("Ask whether anything changed in activity, caffeine, or medication recently.");
+      if (has("sleepHours")) qs.push("Ask about sleep quality and any change in routine or schedule.");
+      if (has("hrv") && !has("restingHeartRate")) qs.push("Ask about recovery, training load, or stress over the past few weeks.");
+      if (has("skinTemp") || has("spo2")) qs.push("Ask about fever, chills, or feeling run down over the past couple of weeks.");
+      else if (has("respiratoryRate")) qs.push("Ask about any respiratory symptoms since the change began.");
+      if (has("steps") || has("activeCalories")) qs.push("Ask whether reduced activity reflects how the patient has been feeling.");
+      if (qs.length === 0) qs.push("Review the flagged trend with the patient and ask what changed recently.");
+      return qs;
+    }
+    // When several recovery/respiratory metrics move together, add one non-diagnostic line.
+    function correlationNote(concerning) {
+      const keys = new Set(concerning.map((f) => f.key));
+      const cluster = ["restingHeartRate", "hrv", "skinTemp", "spo2", "respiratoryRate"].filter((k) => keys.has(k));
+      if (cluster.length >= 3) return "Several recovery and respiratory metrics moved together over the same window.";
+      return null;
+    }
+    function buildBrief(p) {
+      const concerning = p.findings.filter((f) => f.concerning);
+      if (p.status === "green" || !concerning.length)
+        return { claims: [], summary: "No notable changes. All shared metrics are within this patient's own baseline range over the recent window.", questions: [], note: null, extra: 0 };
+      const ranked = concerning.slice().sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+      const top = ranked.slice(0, 4);
+      const claims = top.map((f) => ({ key: f.key, text: phrase(f) }));
+      const extra = ranked.length - top.length;
+      return {
+        claims,
+        summary: claims.map((c) => c.text).join(" "),
+        questions: buildQuestions(ranked).slice(0, 3),
+        note: correlationNote(concerning),
+        extra,
+      };
+    }
+    function briefToText(p, brief) {
+      const lines = [`Baseline pre-visit brief — ${p.name} (${p.device})`, "", brief.summary];
+      if (brief.note) lines.push("", brief.note);
+      if (p.note) lines.push("", `Patient note: ${p.note}`);
+      if (brief.questions.length) { lines.push("", "Suggested questions:"); brief.questions.forEach((q) => lines.push(`- ${q}`)); }
+      lines.push("", "Insights are based on the patient's own baseline. Not a diagnosis.");
+      return lines.join("\n");
+    }
+    // Render brief claims as clickable chips that jump to their chart.
+    function briefHtml(brief) {
+      if (!brief.claims.length) return `<p class="summary">${brief.summary}</p>`;
+      const claimsHtml = brief.claims
+        .map((c) => `<span class="claim" data-key="${c.key}">${c.text}</span>`)
+        .join(" ");
+      const noteHtml = brief.note ? `<p class="corr-note">${brief.note}</p>` : "";
+      const extraHtml = brief.extra > 0 ? `<p class="corr-note">+${brief.extra} more metric${brief.extra > 1 ? "s" : ""} outside baseline — see charts below.</p>` : "";
+      return `<p class="summary">${claimsHtml}</p>${noteHtml}${extraHtml}`;
+    }
+    function wireClaims(scope) {
+      scope.querySelectorAll(".claim").forEach((el) => (el.onclick = () => focusChart(el.dataset.key)));
+    }
+
+    /* ===================== data assembly ===================== */
+    function buildPatients() {
+      return Object.entries(CSV).map(([name, text], id) => {
+        const prof = PROFILE[name];
+        const { headers, rows } = parseCsv(text);
+        const device = detectBrand(headers);
+        const records = normalize(device, rows);
+        return { id, name, device, note: prof.note, share: prof.share, shareDays: prof.shareDays ?? 0, connected: prof.connected, lastVisit: prof.lastVisit, nextVisit: prof.nextVisit, careplan: prof.careplan, records, ...analyze(records, prof.share) };
+      });
+    }
+    let PATIENTS = buildPatients();
+    const STATUS_LABEL = { red: "Notable change", yellow: "Worth a look", green: "Stable" };
+    const fmtDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+    /* ===================== charts (shared) ===================== */
+    const chartDomId = (key) => "chart-" + key;
+
+    // Chart.js plugin: draw a dashed vertical line at the last-visit date.
+    const lastVisitLine = {
+      id: "lastVisitLine",
+      afterDraw(chart, args, opts) {
+        if (opts.index == null || opts.index < 0) return;
+        const x = chart.scales.x.getPixelForValue(opts.index);
+        const { top, bottom } = chart.chartArea;
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, top); ctx.lineTo(x, bottom);
+        ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.strokeStyle = "#94a3b8";
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#64748b"; ctx.font = "10px -apple-system, sans-serif";
+        ctx.fillText("last visit", x + 4, top + 10);
+        ctx.restore();
+      },
+    };
+
+    let charts = [];
+    function renderCharts(container, p) {
+      charts.forEach((c) => c.destroy()); charts = [];
+      container.innerHTML = "";
+      const flaggedKeys = new Set(p.findings.map((f) => f.key));
+      const labels = p.records.map((r) => r.date.slice(5));
+      // Index of the first reading on/after the last visit date, but only if the
+      // last-visit date actually falls within the currently visible range.
+      let lastVisitIdx = -1;
+      if (p.lastVisit && p.records.length && p.records[0].date <= p.lastVisit) {
+        lastVisitIdx = p.records.findIndex((r) => r.date >= p.lastVisit);
+      }
+      for (const metric of METRICS) {
+        if (p.share[metric.key] === false) continue;
+        const vals = p.records.map((r) => r[metric.key]);
+        if (vals.every((v) => v == null)) continue;
+        const base = p.baseline[metric.key], flagged = flaggedKeys.has(metric.key);
+        const card = document.createElement("div");
+        card.className = "chart-card" + (flagged ? " flagged" : "");
+        card.id = chartDomId(metric.key);
+        card.innerHTML = `<div class="chart-title">${metric.label} (${metric.unit})${flagged ? ' <span class="flag">flagged</span>' : ""}</div><canvas></canvas>`;
+        container.appendChild(card);
+        const ctx = card.querySelector("canvas");
+        const bandHi = base ? p.records.map(() => base.hi) : [], bandLo = base ? p.records.map(() => base.lo) : [];
+        charts.push(new Chart(ctx, {
+          type: "line",
+          plugins: [lastVisitLine],
+          data: { labels, datasets: [
+            { data: bandHi, borderWidth: 0, pointRadius: 0, backgroundColor: "rgba(99,102,241,0.10)", fill: "+1" },
+            { data: bandLo, borderWidth: 0, pointRadius: 0, fill: false },
+            { data: vals, borderColor: flagged ? "#dc2626" : "#2563eb", backgroundColor: flagged ? "#dc2626" : "#2563eb", borderWidth: 2, pointRadius: 2, tension: 0.25 },
+          ] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, lastVisitLine: { index: lastVisitIdx } }, scales: { x: { ticks: { maxTicksLimit: 6, font: { size: 10 } } } } },
+        }));
+      }
+    }
+
+    // Briefly highlight a chart card and scroll to it (click-a-claim -> chart).
+    function focusChart(key) {
+      const el = document.getElementById(chartDomId(key));
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("pulse");
+      setTimeout(() => el.classList.remove("pulse"), 1200);
+    }
+
+    /* ===================== care plan (post-visit) ===================== */
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const todayIso = () => new Date().toISOString().slice(0, 10);
+    const carePlanHasContent = (cp) => cp && (cp.summary || cp.watch);
+
+    // Doctor-side editor for the post-visit note (summary + what to watch).
+    function renderCarePlanEditor(scope, full) {
+      const cp = full.careplan;
+      scope.innerHTML = `
+        <div class="careplan-head"><h3>Post-visit note</h3>${cp.updated ? `<span class="subtle">last updated ${fmtDate(cp.updated)}</span>` : ""}</div>
+        <p class="subtle">Written by you. The patient sees this in their portal. Describe actions and follow-up — not a diagnosis.</p>
+        <label class="cp-label">Visit summary</label>
+        <textarea id="cp-summary" rows="3" placeholder="What you discussed and the plan going forward.">${esc(cp.summary)}</textarea>
+        <label class="cp-label">What to watch</label>
+        <textarea id="cp-watch" rows="2" placeholder="e.g. Keep an eye on resting heart rate over the next 2 weeks.">${esc(cp.watch)}</textarea>
+        <div class="cp-actions"><button class="copy" id="cp-save">Save note</button><span id="cp-saved" class="saved-msg"></span></div>`;
+
+      scope.querySelector("#cp-save").onclick = () => {
+        cp.summary = scope.querySelector("#cp-summary").value.trim();
+        cp.watch = scope.querySelector("#cp-watch").value.trim();
+        cp.author = "Dr. (you)";
+        cp.updated = todayIso();
+        PROFILE[full.name].careplan = cp;
+        const msg = scope.querySelector("#cp-saved");
+        msg.textContent = "Saved — visible to the patient.";
+        setTimeout(() => (msg.textContent = ""), 2500);
+      };
+    }
+
+    // Patient-side read-only view of the post-visit note.
+    function carePlanPatientHtml(cp) {
+      if (!carePlanHasContent(cp)) {
+        return `<p class="subtle">No post-visit note yet. After your next visit, your care team's summary will appear here.</p>`;
+      }
+      return `
+        ${cp.updated ? `<p class="subtle">Updated ${fmtDate(cp.updated)}${cp.author ? ` by ${esc(cp.author)}` : ""}</p>` : ""}
+        ${cp.summary ? `<p class="summary">${esc(cp.summary)}</p>` : ""}
+        ${cp.watch ? `<div class="watch-box"><span class="note-label">What to watch</span>${esc(cp.watch)}</div>` : ""}`;
+    }
+
+    /* ===================== router ===================== */
+    const root = document.getElementById("root");
+    const authBar = document.getElementById("auth-bar");
+    const roleLabel = document.getElementById("role-label");
+    let state = {
+      route: "landing", role: null, doctorSelected: null, patientName: "Jordan Alvarez",
+      windowDays: 0,              // doctor's chart timeframe
+      sort: "urgency",            // doctor patient-list sort
+      filterAttention: false,     // doctor: show only red/yellow
+    };
+    const WINDOWS = [ { days: 14, label: "14d" }, { days: 30, label: "30d" }, { days: 0, label: "All" } ];
+    // Patient-chosen share windows (how far back the doctor may see). 0 = all.
+    const SHARE_WINDOWS = [ { days: 30, label: "30 days" }, { days: 90, label: "90 days" }, { days: 0, label: "All history" } ];
+
+    const daysToIso = (lastDate, days) => {
+      const d = new Date(lastDate + "T00:00:00");
+      d.setDate(d.getDate() - days);
+      return d.toISOString().slice(0, 10);
+    };
+
+    // Return a view of the patient, re-analyzed against the effective window.
+    // The window is the TIGHTER of the patient's own shareDays cap and the
+    // doctor's selected windowDays. opts { windowDays }.
+    function viewPatient(p, opts = {}) {
+      const windowDays = opts.windowDays ?? 0;
+      const zFlag = opts.zFlag;
+      const shareDays = p.shareDays ?? 0;
+      // Effective window: smallest positive of the two (0 means unlimited).
+      const candidates = [windowDays, shareDays].filter((d) => d > 0);
+      const eff = candidates.length ? Math.min(...candidates) : 0;
+      let records = p.records;
+      if (eff) {
+        const iso = daysToIso(p.records[p.records.length - 1].date, eff);
+        const sliced = p.records.filter((r) => r.date >= iso);
+        if (sliced.length >= 4) records = sliced; // else keep full history to baseline
+      }
+      const analysis = analyze(records, p.share, zFlag);
+      return { ...p, records, effWindow: eff, ...analysis };
+    }
+
+    // Build the timeframe toggle markup; buttons carry data-days.
+    function timeframeToggle() {
+      return `<div class="tf-toggle">${WINDOWS.map((w) =>
+        `<button class="tf-btn${w.days === state.windowDays ? " active" : ""}" data-days="${w.days}">${w.label}</button>`
+      ).join("")}</div>`;
+    }
+    function wireTimeframe(scope, rerender) {
+      scope.querySelectorAll(".tf-btn").forEach((b) => (b.onclick = () => {
+        state.windowDays = Number(b.dataset.days);
+        rerender();
+      }));
+    }
+
+    // Routes: "landing" | "signin-doctor" | "signin-patient" | "doctor" | "patient"
+    function go(route) {
+      state.route = route;
+      const signedIn = route === "doctor" || route === "patient";
+      state.role = signedIn ? route : null;
+      // Top-bar controls only show once signed in. You're bound to the role you
+      // signed in as — to switch roles you sign out and sign back in.
+      authBar.hidden = !signedIn;
+      if (signedIn) {
+        roleLabel.textContent = route === "doctor" ? "Clinician" : "Patient";
+      }
+      if (route === "doctor") renderDoctor();
+      else if (route === "patient") renderPatient();
+      else if (route === "signin-doctor") renderSignin("doctor");
+      else if (route === "signin-patient") renderSignin("patient");
+      else if (route === "signup-doctor") renderSignup("doctor");
+      else if (route === "signup-patient") renderSignup("patient");
+      else renderLanding();
+      window.scrollTo(0, 0);
+    }
+    // Sign out and logo both return to the landing/login.
+    document.getElementById("sign-out").onclick = () => go("landing");
+    document.querySelector(".brand").onclick = () => go("landing");
+
+    /* ---------- landing ---------- */
+    function renderLanding() {
+      root.innerHTML = `
+        <section class="landing">
+          <div class="hero-brand">
+            <span class="hero-logo" aria-hidden="true">
+              <svg viewBox="0 0 48 48" width="34" height="34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 29h11l4-13 7 22 5-14 3 5h9" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="42" cy="29" r="3.2" fill="#fff"/>
+              </svg>
+            </span>
+            <span class="hero-name">Baseline<span class="dotmark">.</span></span>
+          </div>
+          <h1>One shared layer for wearable data.</h1>
+          <p class="lede">Patients connect any wearable and choose what to share. Their care team gets a 30-second pre-visit brief — what changed, what's outside the patient's own normal, and what to ask about.</p>
+          <div class="role-cards">
+            <button class="role-card" data-go="signin-doctor">
+              <div class="rc-icon doctor">🩺</div>
+              <div class="rc-title">I'm a clinician</div>
+              <div class="rc-sub">Review your patients before their visits</div>
+              <div class="rc-primary">Sign in as a clinician →</div>
+            </button>
+            <button class="role-card" data-go="signin-patient">
+              <div class="rc-icon patient">⌚</div>
+              <div class="rc-title">I'm a patient</div>
+              <div class="rc-sub">Connect a device and share with your doctor</div>
+              <div class="rc-primary">Sign in as a patient →</div>
+            </button>
+          </div>
+          <p class="disclaimer center">Synthetic data only. Not a diagnosis.</p>
+        </section>`;
+      root.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(b.dataset.go)));
+    }
+
+    /* ---------- sign in (fake) ---------- */
+    function renderSignin(role) {
+      const isDoc = role === "doctor";
+      const demoEmail = isDoc ? "dr.reed@clinic.example" : "jordan@example.com";
+      root.innerHTML = `
+        <section class="signin">
+          <div class="signin-card">
+            <div class="hero-brand" style="margin-bottom:22px">
+              <span class="hero-logo" aria-hidden="true">
+                <svg viewBox="0 0 48 48" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 29h11l4-13 7 22 5-14 3 5h9" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="42" cy="29" r="3.2" fill="#fff"/>
+                </svg>
+              </span>
+              <span class="hero-name" style="font-size:26px">Baseline<span class="dotmark">.</span></span>
+            </div>
+            <h2>${isDoc ? "Clinician sign in" : "Patient sign in"}</h2>
+            <p class="subtle">${isDoc ? "Access your patient dashboard." : "Connect your wearable and manage sharing."}</p>
+            <form id="signin-form">
+              <label class="cp-label">Email</label>
+              <input class="field" type="email" id="si-email" value="${demoEmail}" autocomplete="off"/>
+              <label class="cp-label">Password</label>
+              <input class="field" type="password" id="si-pass" value="demo1234"/>
+              <button class="copy signin-btn" type="submit">Sign in</button>
+            </form>
+            <p class="signin-alt">Don't have an account? <a href="#" id="to-signup">Create one</a></p>
+            <p class="signin-alt">Not a ${isDoc ? "clinician" : "patient"}? <a href="#" id="switch-role">Sign in as a ${isDoc ? "patient" : "clinician"}</a></p>
+            <p class="disclaimer center" style="margin-top:18px">Demo sign-in — any credentials work. Synthetic data only.</p>
+          </div>
+        </section>`;
+      root.querySelector("#signin-form").onsubmit = (e) => { e.preventDefault(); go(role); };
+      root.querySelector("#to-signup").onclick = (e) => { e.preventDefault(); go(isDoc ? "signup-doctor" : "signup-patient"); };
+      root.querySelector("#switch-role").onclick = (e) => { e.preventDefault(); go(isDoc ? "signin-patient" : "signin-doctor"); };
+    }
+
+    /* ---------- create account (fake) ---------- */
+    function renderSignup(role) {
+      const isDoc = role === "doctor";
+      root.innerHTML = `
+        <section class="signin">
+          <div class="signin-card">
+            <div class="hero-brand" style="margin-bottom:22px">
+              <span class="hero-logo" aria-hidden="true">
+                <svg viewBox="0 0 48 48" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 29h11l4-13 7 22 5-14 3 5h9" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="42" cy="29" r="3.2" fill="#fff"/>
+                </svg>
+              </span>
+              <span class="hero-name" style="font-size:26px">Baseline<span class="dotmark">.</span></span>
+            </div>
+            <h2>Create ${isDoc ? "a clinician" : "a patient"} account</h2>
+            <p class="subtle">${isDoc ? "Start reviewing your patients before their visits." : "Connect a wearable and share with your care team."}</p>
+            <form id="signup-form">
+              <label class="cp-label">Full name</label>
+              <input class="field" type="text" id="su-name" placeholder="${isDoc ? "Dr. Alex Reed" : "Jordan Alvarez"}" autocomplete="off"/>
+              <label class="cp-label">Email</label>
+              <input class="field" type="email" id="su-email" placeholder="you@example.com" autocomplete="off"/>
+              <label class="cp-label">Password</label>
+              <input class="field" type="password" id="su-pass" placeholder="Create a password"/>
+              <label class="cp-label">Confirm password</label>
+              <input class="field" type="password" id="su-pass2" placeholder="Re-enter password"/>
+              <div class="su-err" id="su-err"></div>
+              <button class="copy signin-btn" type="submit">Create account</button>
+            </form>
+            <p class="signin-alt">Already have an account? <a href="#" id="to-signin">Sign in</a></p>
+            <p class="disclaimer center" style="margin-top:18px">Demo sign-up — no account is actually created. Synthetic data only.</p>
+          </div>
+        </section>`;
+      root.querySelector("#signup-form").onsubmit = (e) => {
+        e.preventDefault();
+        const name = root.querySelector("#su-name").value.trim();
+        const email = root.querySelector("#su-email").value.trim();
+        const pass = root.querySelector("#su-pass").value;
+        const pass2 = root.querySelector("#su-pass2").value;
+        const err = root.querySelector("#su-err");
+        if (!name || !email || !pass) { err.textContent = "Please fill in name, email, and password."; return; }
+        if (pass !== pass2) { err.textContent = "Passwords don't match."; return; }
+        go(role); // account "created" — sign straight into that role
+      };
+      root.querySelector("#to-signin").onclick = (e) => { e.preventDefault(); go(isDoc ? "signin-doctor" : "signin-patient"); };
+    }
+
+    /* ---------- doctor (main product) ---------- */
+    const STATUS_RANK = { red: 0, yellow: 1, green: 2 };
+    function renderDoctor() {
+      // Each list entry is a doctor-view (respects the patient's share window).
+      let list = PATIENTS.map((full) => viewPatient(full, { windowDays: state.windowDays }));
+      if (state.filterAttention) list = list.filter((p) => p.status !== "green");
+      list.sort((a, b) => {
+        if (state.sort === "visit") return a.nextVisit.localeCompare(b.nextVisit);
+        if (state.sort === "name") return a.name.localeCompare(b.name);
+        // urgency: status first, then urgency score
+        return (STATUS_RANK[a.status] - STATUS_RANK[b.status]) || (b.urgency - a.urgency);
+      });
+      // Ensure a valid selection even after filtering.
+      if (!list.find((p) => p.id === state.doctorSelected)) state.doctorSelected = list.length ? list[0].id : null;
+
+      const full = PATIENTS.map((f) => viewPatient(f, { windowDays: state.windowDays }));
+      const reds = full.filter((p) => p.status === "red").length;
+      const yellows = full.filter((p) => p.status === "yellow").length;
+      const attention = reds + yellows;
+      const triage = attention
+        ? `${full.length} patients with upcoming visits · <strong>${attention} need${attention > 1 ? "" : "s"} attention</strong>${reds ? ` (${reds} notable)` : ""}.`
+        : `${full.length} patients with upcoming visits · all stable.`;
+      root.innerHTML = `
+        <div class="triage">${triage}</div>
+        <div class="layout">
+          <aside class="sidebar">
+            <div class="list-controls">
+              <select id="sort-select">
+                <option value="urgency" ${state.sort === "urgency" ? "selected" : ""}>Most urgent</option>
+                <option value="visit" ${state.sort === "visit" ? "selected" : ""}>Soonest visit</option>
+                <option value="name" ${state.sort === "name" ? "selected" : ""}>Name</option>
+              </select>
+              <label class="filter-toggle"><input type="checkbox" id="filter-attn" ${state.filterAttention ? "checked" : ""}/> Needs attention</label>
+            </div>
+            <div id="patient-list" class="patient-list"></div>
+          </aside>
+          <section id="detail" class="detail"></section>
+        </div>`;
+      root.querySelector("#sort-select").onchange = (e) => { state.sort = e.target.value; renderDoctor(); };
+      root.querySelector("#filter-attn").onchange = (e) => { state.filterAttention = e.target.checked; renderDoctor(); };
+
+      const listEl = root.querySelector("#patient-list");
+      if (!list.length) listEl.innerHTML = `<p class="subtle" style="padding:10px">No patients match this filter.</p>`;
+      for (const p of list) {
+        const li = document.createElement("button");
+        li.className = "patient-item" + (p.id === state.doctorSelected ? " active" : "");
+        li.onclick = () => { state.doctorSelected = p.id; renderDoctor(); };
+        li.innerHTML = `<span class="dot ${p.status}"></span><span class="pinfo"><span class="pname">${p.name}</span><span class="pmeta">${p.device} · visit ${fmtDate(p.nextVisit)}</span></span>`;
+        listEl.appendChild(li);
+      }
+      const detail = root.querySelector("#detail");
+      if (state.doctorSelected == null) { detail.innerHTML = ""; return; }
+      const sel = PATIENTS.find((x) => x.id === state.doctorSelected);
+      const p = viewPatient(sel, { windowDays: state.windowDays });
+      const brief = buildBrief(p);
+      const questionsHtml = brief.questions.length ? `<div class="questions"><h3>Suggested questions</h3><ul>${brief.questions.map((q) => `<li>${q}</li>`).join("")}</ul></div>` : "";
+      const noteHtml = sel.note ? `<div class="patient-note"><span class="note-label">Patient note</span>${sel.note}</div>` : "";
+      const tfLabel = p.effWindow ? `last ${p.effWindow} days` : "full history";
+      const shareLabel = sel.shareDays ? ` · patient shares ${sel.shareDays}d` : "";
+      detail.innerHTML = `
+        <header class="detail-head">
+          <div><h2>${p.name}</h2><div class="subtle">${p.device} · visit ${fmtDate(p.nextVisit)} · ${tfLabel}${shareLabel} · last ${p.recentCount} readings vs baseline</div></div>
+          <div class="head-right"><span class="badge ${p.status}">${STATUS_LABEL[p.status]}</span>${timeframeToggle()}</div>
+        </header>
+        <section class="brief"><div class="brief-head"><h3>30-second brief</h3><button id="copy-btn" class="copy">Copy to note</button></div>${briefHtml(brief)}</section>
+        ${noteHtml}${questionsHtml}
+        <section class="charts" id="charts"></section>
+        <p class="disclaimer">Insights are based on this patient's own baseline. Not a diagnosis. Click a finding above to jump to its chart.</p>
+        <section class="careplan-card" id="careplan"></section>`;
+      detail.querySelector("#copy-btn").onclick = (e) => { navigator.clipboard.writeText(briefToText(p, brief)); e.target.textContent = "Copied"; setTimeout(() => (e.target.textContent = "Copy to note"), 1500); };
+      renderCharts(detail.querySelector("#charts"), p);
+      wireClaims(detail);
+      wireTimeframe(detail, renderDoctor);
+      renderCarePlanEditor(detail.querySelector("#careplan"), sel);
+    }
+
+    /* ---------- patient portal ---------- */
+    function renderPatient() {
+      const names = PATIENTS.map((p) => p.name);
+      const p = PATIENTS.find((x) => x.name === state.patientName) || PATIENTS[0];
+      const pv = viewPatient(p, { windowDays: state.windowDays }); // preview respects patient's own share window
+      const brief = buildBrief(pv);
+      const shareRows = METRICS.map((m) => `
+        <label class="share-row">
+          <span>${m.label}</span>
+          <input type="checkbox" data-metric="${m.key}" ${p.share[m.key] !== false ? "checked" : ""}/>
+        </label>`).join("");
+      root.innerHTML = `
+        <div class="patient-wrap">
+          <div class="who"><label>Signed in as</label>
+            <select id="who-select">${names.map((n) => `<option ${n === p.name ? "selected" : ""}>${n}</option>`).join("")}</select>
+          </div>
+          <div class="patient-stack">
+            <section class="card device-card">
+              <div class="device-main">
+                <span class="device-dot ${p.connected ? "on" : ""}"></span>
+                <div class="device-info">
+                  <span class="device-name">${p.device}</span>
+                  <span class="subtle">Connected device</span>
+                </div>
+                <span class="badge ${p.connected ? "green" : "yellow"}">${p.connected ? "Connected" : "Not connected"}</span>
+              </div>
+              <div class="device-upload">
+                <label class="upload-btn" for="file-input">Upload export (CSV)</label>
+                <input type="file" id="file-input" accept=".csv" hidden/>
+                <span id="upload-status" class="subtle">Any WHOOP, Oura, or Apple export works.</span>
+              </div>
+            </section>
+            <section class="card">
+              <h3>What you share with your care team</h3>
+              <p class="subtle">You control exactly which metrics your doctor can see.</p>
+              <div class="share-list">${shareRows}</div>
+              <div class="share-window">
+                <label for="share-days">How far back to share</label>
+                <select id="share-days">${SHARE_WINDOWS.map((w) =>
+                  `<option value="${w.days}" ${w.days === (p.shareDays ?? 0) ? "selected" : ""}>${w.label}</option>`
+                ).join("")}</select>
+              </div>
+            </section>
+            <section class="card">
+              <div class="card-head">
+                <h3>What your doctor will see</h3>
+                <div class="head-right"><span class="badge ${pv.status}">${STATUS_LABEL[pv.status]}</span>${timeframeToggle()}</div>
+              </div>
+              ${briefHtml(brief)}
+              <section class="charts" id="charts"></section>
+            </section>
+            <section class="card">
+              <h3>A note for your doctor <span class="subtle">(optional)</span></h3>
+              <p class="subtle">Add context your care team should know before your visit.</p>
+              <textarea id="note-input" rows="3" placeholder="e.g. Started a new medication on 10/1.">${p.note || ""}</textarea>
+            </section>
+            <section class="card from-doctor">
+              <h3>From your care team</h3>
+              ${carePlanPatientHtml(p.careplan)}
+            </section>
+          </div>
+          <p class="disclaimer">Synthetic data only. Not a diagnosis.</p>
+        </div>`;
+
+      root.querySelector("#who-select").onchange = (e) => { state.patientName = e.target.value; renderPatient(); };
+      root.querySelectorAll('input[data-metric]').forEach((cb) => (cb.onchange = () => {
+        p.share[cb.dataset.metric] = cb.checked;
+        PROFILE[p.name].share[cb.dataset.metric] = cb.checked;
+        Object.assign(p, analyze(p.records, p.share)); // recompute against shared metrics only
+        renderPatient();
+      }));
+      root.querySelector("#share-days").onchange = (e) => {
+        const d = Number(e.target.value);
+        p.shareDays = d; PROFILE[p.name].shareDays = d;
+        renderPatient();
+      };
+      root.querySelector("#note-input").onchange = (e) => { p.note = e.target.value; PROFILE[p.name].note = e.target.value; };
+      root.querySelector("#file-input").onchange = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const { headers, rows } = parseCsv(String(reader.result));
+            const device = detectBrand(headers);
+            const records = normalize(device, rows);
+            if (!records.length) throw new Error("no rows mapped");
+            p.device = device; p.records = records; PROFILE[p.name].device = device;
+            Object.assign(p, analyze(records, p.share));
+            root.querySelector("#upload-status").textContent = `Imported ${records.length} days from ${device}.`;
+            setTimeout(renderPatient, 400);
+          } catch (err) {
+            root.querySelector("#upload-status").textContent = "Could not read that file. Try a WHOOP, Oura, or Apple export.";
+          }
+        };
+        reader.readAsText(file);
+      };
+      renderCharts(root.querySelector("#charts"), pv);
+      wireClaims(root);
+      wireTimeframe(root, renderPatient);
+    }
+
+    go("landing");
+    </script>
+  </body>
+</html>

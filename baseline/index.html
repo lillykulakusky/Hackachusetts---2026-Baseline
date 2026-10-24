@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baseline — wearable data for the care team</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">◔</span>
+        <div>
+          <div class="title">Baseline</div>
+          <div class="tag">Wearable data for the care team</div>
+        </div>
+      </div>
+      <div class="topbar-right">Brand-agnostic · synthetic data · not a diagnosis</div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <h2 class="sidebar-title">Patients</h2>
+        <div id="patient-list" class="patient-list"></div>
+      </aside>
+      <section id="detail" class="detail"></section>
+    </main>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

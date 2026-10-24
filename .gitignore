@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Obsidian local workspace state (keep notes, ignore UI state)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# Editor / tooling
+.vscode/
+*.log
+
+# OS / misc
+Thumbs.db

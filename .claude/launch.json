@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "baseline",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/ryanfarris/Projects/hackachusetts-2026", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}

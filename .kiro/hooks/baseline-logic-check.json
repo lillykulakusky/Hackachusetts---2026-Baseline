@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Check core logic on save",
+      "trigger": "PostFileSave",
+      "matcher": "src/(parse|normalize|analyze|brief)\\.js$",
+      "action": {
+        "type": "agent",
+        "prompt": "A core Baseline logic file was just saved. Verify it still obeys the steering rules in .kiro/steering/product.md: (1) no diagnostic language anywhere, (2) every numeric claim in brief.js comes from a value computed in analyze.js and none are hard-coded, (3) the parse/normalize path still maps WHOOP, Oura, and Apple columns to the standard model. Trace the three demo patients (Jordan=red, Priya=yellow, Sam=green) through the logic and report any finding that would change their status. Keep it brief."
+      }
+    }
+  ]
+}
