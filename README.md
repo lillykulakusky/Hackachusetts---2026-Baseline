@@ -1,8 +1,9 @@
 # Baseline
 
-Wearable data for the care team. Patients share data from any wearable (WHOOP,
-Oura, Apple Watch, Fitbit); their clinician gets a 30-second pre-visit brief:
-what changed, what is unusual for that patient, and what to ask about.
+Wearable data for the care team. Patients share data from their wearable (WHOOP,
+Oura, or Apple Watch today; the standard model is built to extend to others);
+their clinician gets a 30-second pre-visit brief: what changed, what is unusual
+for that patient, and what to ask about.
 
 Hackachusetts 2026 — Healthcare & Biotech track.
 
@@ -11,18 +12,25 @@ Hackachusetts 2026 — Healthcare & Biotech track.
 
 ## What it does
 
-- **Brand-agnostic ingestion.** WHOOP, Oura and Apple exports all map to one
-  standard model (resting heart rate, HRV, sleep, respiratory rate).
-- **Personal baselines.** Changes are measured against each patient's own normal
-  using rolling means and standard deviations — not population norms.
-- **Code finds the anomalies; prose only phrases them.** Deterministic math in
-  `baseline/src/analyze.js` computes every number. `baseline/src/brief.js` turns
-  those findings into text and suggested questions. The writer can never invent a
-  number.
-- **Clinician dashboard.** Patient list sorted most-urgent-first with red/yellow/
-  green flags, the 30-second brief, up to 3 suggested questions, "copy to note",
-  and trend charts with the patient's baseline band.
-- **Safe by construction.** No diagnostic language, synthetic data only.
+- **Brand-agnostic ingestion.** WHOOP, Oura and Apple Watch exports are detected
+  from their header signature and mapped to one standard model (resting heart
+  rate, HRV, sleep hours, respiratory rate). Units are normalized along the way —
+  WHOOP sleep minutes and Oura sleep seconds both become hours.
+- **Personal baselines.** Each patient's earlier history is the baseline (mean and
+  standard deviation per metric); the most recent window is compared against it.
+  Everything is measured against that patient's own normal, never population norms.
+- **Code finds the changes; prose only phrases them.** Deterministic math in
+  `baseline/src/analyze.js` flags a metric when the recent mean moves past a z-score
+  or percent-change threshold, and sets an overall status. `baseline/src/brief.js`
+  turns those findings into sentences and suggested questions using only the numbers
+  analyze.js produced — the text layer can never invent a value.
+- **Clinician dashboard.** Patients are listed most-urgent-first (urgency = sum of
+  concerning z-scores) with a status dot: Notable change, Worth a look, or Stable.
+  Each patient view shows the 30-second brief, up to 3 suggested questions, a
+  "Copy to note" button that exports a plain-text brief, and per-metric trend charts
+  that shade the patient's baseline band and highlight flagged metrics in red.
+- **Safe by construction.** Non-diagnostic language only (it states what changed,
+  not why), a persistent "Not a diagnosis" disclaimer, and synthetic data only.
 
 ## Run it
 
@@ -50,23 +58,25 @@ baseline/
   src/brief.js      findings -> brief text + suggested questions
   src/app.js        dashboard wiring + charts
   data/*.csv        3 synthetic patients, 3 brand formats
-  .kiro/            spec (requirements, design, tasks) + steering + hook
+  .kiro/            spec (requirements, design, tasks) + steering
+.kiro/hooks/        agent hook that runs logic checks on save
 ```
 
 ## The three demo patients
 
-| Patient | Device | Story |
-|---|---|---|
-| Jordan Alvarez | WHOOP | Red — RHR up, HRV down, sleep down since early October |
-| Priya Menon | Oura | Yellow — mild recent drift |
-| Sam Whitaker | Apple Watch | Green — stable within baseline |
+| Patient | Device | Status | Story |
+|---|---|---|---|
+| Jordan Alvarez | WHOOP | Notable change | Resting HR climbs (~56 → 67 bpm), HRV falls and sleep drops from late September onward |
+| Priya Menon | Oura | Worth a look | Mild recent drift from baseline |
+| Sam Whitaker | Apple Watch | Stable | Readings stay within the personal baseline band |
 
 ## How Kiro was used
 
 - **Spec mode** drove the build: `baseline/.kiro/specs/baseline/{requirements,design,tasks}.md`.
 - **Steering** (`baseline/.kiro/steering/product.md`) enforced the safety rules: never
   diagnose, every number must be computed, synthetic data only.
-- **Agent hook** (`baseline/.kiro/hooks/`) runs the logic checks when core files are saved.
+- **Agent hook** (`.kiro/hooks/baseline-logic-check.json`) runs the logic checks when
+  core files are saved.
 
 ## Safety
 
